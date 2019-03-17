@@ -1,5 +1,6 @@
-from flask import Flask 
-from config import DevConfig 
+from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
+from config import DevConfig
  
 app = Flask(__name__) 
 app.config.from_object(DevConfig) 

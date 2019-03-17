@@ -6,3 +6,4 @@ class ProdConfig(Config):
 
 class DevConfig(Config):
     DEBUG = True
+    SQLALCHEMY_DATABASE_URI = "mssql+pyodbc://bmoretz:l3tm31n@DATACENTER/FLASK"
