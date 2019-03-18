@@ -1,10 +1,16 @@
+from urllib.parse import urlparse, quote_plus
+
 class Config(object):
-    pass
+    POSTS_PER_PAGE = 10
 
 class ProdConfig(Config):
-    pass
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SQLALCHEMY_DATABASE_URI = "mssql+pyodbc://bmoretz:l3tm31n@DATACENTER:1433/FLASK?driver=ODBC+Driver+13+for+SQL+Server"
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
 
 class DevConfig(Config):
     DEBUG = True
-    SQLALCHEMY_DATABASE_URI = "mssql+pyodbc://bmoretz:l3tm31n@DATACENTER:1433/FLASK?driver=ODBC+Driver+13+for+SQL+Server"
+    params = quote_plus("DRIVER={SQL Server};SERVER=DATACENTER;DATABASE=FLASK;UID=bmoretz;PWD=l3tm31n")
+    SQLALCHEMY_DATABASE_URI = "mssql+pyodbc:///?odbc_connect=%s" % params
+    SQLALCHEMY_TRACK_MODIFICATIONS = True
     SQLALCHEMY_ECHO = True
