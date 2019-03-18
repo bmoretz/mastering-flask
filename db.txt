@@ -1,0 +1,3 @@
+server: DATACENTER
+user: bmoretz
+password: l3tm31n

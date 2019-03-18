@@ -1,12 +1,16 @@
 import datetime
+import pyodbc
+import json
 
 from flask import Flask, render_template, flash, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
+
 from flask_migrate import Migrate
 from flask_wtf import FlaskForm as Form
 from wtforms import StringField, TextAreaField
 from wtforms.validators import DataRequired, Length
 from sqlalchemy import func
+from sqlalchemy.sql import text
 from config import DevConfig
 
 app = Flask(__name__)
@@ -99,9 +103,6 @@ class CommentForm(Form):
 @app.route('/')
 @app.route('/<int:page>')
 def home(page=1):
-
-    print("* Using DB: %s" % (db.session))
-
     posts = Post.query.order_by(Post.publish_date.desc()).paginate(page, app.config.get('POSTS_PER_PAGE', 10), False)
     recent, top_tags = sidebar_data()
 
@@ -183,7 +184,7 @@ def sidebar_data():
         Tag, func.count(tags.c.post_id).label('total')
     ).join(
         tags
-    ).group_by(Tag).order_by('total DESC').limit(5).all()
+    ).group_by(Tag).order_by(text('total DESC')).limit(5).all()
 
     return recent, top_tags
 
