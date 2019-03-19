@@ -1,8 +1,0 @@
-CREATE TABLE [dbo].[tag]
-(
-[id] [int] NOT NULL IDENTITY(1, 1),
-[title] [varchar] (255) COLLATE SQL_Latin1_General_CP1_CI_AS NULL
-) ON [PRIMARY]
-GO
-ALTER TABLE [dbo].[tag] ADD CONSTRAINT [PK__tag__3213E83F23F4E9CD] PRIMARY KEY CLUSTERED  ([id]) ON [PRIMARY]
-GO

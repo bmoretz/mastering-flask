@@ -1,8 +1,7 @@
 import datetime
-import pyodbc
-import json
+import random
 
-from flask import Flask, render_template, flash, redirect, url_for
+from flask import Flask, render_template, Blueprint, flash, redirect, url_for, session, g
 from flask_sqlalchemy import SQLAlchemy
 
 from flask_migrate import Migrate
@@ -23,20 +22,28 @@ tags = db.Table('post_tags',
     db.Column('tag_id', db.Integer, db.ForeignKey('tag.id'))
 )
 
+blog_blueprint = Blueprint(
+    'blog',
+    __name__,
+    template_folder='templates/blog',
+    url_prefix="/blog"
+)
+
 class User(db.Model):
     __tablename__ = 'user'
     __table_args__ = {'extend_existing': True} 
 
     id = db.Column(db.Integer(), primary_key = True)
-    username = db.Column('user_name', db.String(255), nullable=False, index=True, unique=True)
+    username = db.Column('username', db.String(255), nullable=False, index=True, unique=True)
     password = db.Column(db.String(255))
+
     posts = db.relationship(
         'Post',
         backref='user',
         lazy='dynamic'
     )
 
-    def __init__(self, username):
+    def __init__(self, username=""):
         self.username = username
 
     def __repr__(self):
@@ -50,18 +57,21 @@ class Post(db.Model):
     title = db.Column(db.String(255), nullable=False)
     text = db.Column(db.Text())
     publish_date = db.Column(db.DateTime(), default = datetime.datetime.now)
+    user_id = db.Column(db.Integer(), db.ForeignKey('user.id'))
+    
     comments = db.relationship(
         'Comment',
         backref='post',
         lazy='dynamic'
     )
-    user_id = db.Column(db.Integer(), db.ForeignKey('user.id'))
+
     tags = db.relationship(
         'Tag',
         secondary=tags,
         backref=db.backref('posts', lazy='dynamic')
     )
-    def __init__(self, title):
+
+    def __init__(self, title=""):
         self.title = title
 
     def __repr__(self):
@@ -87,7 +97,7 @@ class Tag(db.Model):
     id = db.Column(db.Integer(), primary_key=True)
     title = db.Column(db.String(255), nullable=False, unique=True)
 
-    def __init__(self, title):
+    def __init__(self, title=""):
         self.title = title
 
     def __repr__(self): 
@@ -100,8 +110,26 @@ class CommentForm(Form):
     )
     text = TextAreaField(u'Comment', validators=[DataRequired()])
 
+def sidebar_data():
+    """Retrieve the most recent posts by time and the most popular tags."""
+    recent = Post.query.order_by(
+        Post.publish_date.desc()
+    ).limit(5).all()
+    
+    top_tags = db.session.query(
+        Tag, func.count(tags.c.post_id).label('total')
+    ).join(
+        tags
+    ).group_by(Tag).order_by(text('total DESC')).limit(5).all()
+
+    return recent, top_tags
+
 @app.route('/')
-@app.route('/<int:page>')
+def index():
+    return redirect(url_for('blog.home'))
+
+@blog_blueprint.route('/')
+@blog_blueprint.route('/<int:page>')
 def home(page=1):
     posts = Post.query.order_by(Post.publish_date.desc()).paginate(page, app.config.get('POSTS_PER_PAGE', 10), False)
     recent, top_tags = sidebar_data()
@@ -113,7 +141,7 @@ def home(page=1):
         top_tags=top_tags
     )
 
-@app.route('/post/<int:post_id>', methods=('GET', 'POST'))
+@blog_blueprint.route('/post/<int:post_id>', methods=('GET', 'POST'))
 def post(post_id):
     form = CommentForm()
     if form.validate_on_submit():
@@ -146,7 +174,7 @@ def post(post_id):
         form=form
     )
 
-@app.route('/posts_by_tag/<string:tag_name>')
+@blog_blueprint.route('/posts_by_tag/<string:tag_name>')
 def posts_by_tag(tag_name):
     tag = Tag.query.filter_by(title=tag_name).first_or_404()
     posts = tag.posts.order_by(Post.publish_date.desc()).all()
@@ -160,7 +188,7 @@ def posts_by_tag(tag_name):
         top_tags=top_tags
     )
 
-@app.route('/posts_by_user/<string:username>')
+@blog_blueprint.route('/posts_by_user/<string:username>')
 def posts_by_user(username):
     user = User.query.filter_by(username=username).first_or_404()
     posts = user.posts.order_by(Post.publish_date.desc()).all()
@@ -174,19 +202,53 @@ def posts_by_user(username):
         top_tags=top_tags
     )
 
-def sidebar_data():
-    """Retrieve the most recent posts by time and the most popular tags."""
-    recent = Post.query.order_by(
-        Post.publish_date.desc()
-    ).limit(5).all()
-    
-    top_tags = db.session.query(
-        Tag, func.count(tags.c.post_id).label('total')
-    ).join(
-        tags
-    ).group_by(Tag).order_by(text('total DESC')).limit(5).all()
+from flask.views import View
 
-    return recent, top_tags
+class GenericListView(View):
+
+    def __init__(self, model, list_template='generic_list.html'):
+        self.model = model
+        self.list_template = list_template
+        self.columns = self.model.__mapper__.columns.keys()
+        # Call super python3 style
+        super(GenericListView, self).__init__()
+
+    def render_template(self, context):
+        return render_template(self.list_template, **context)
+
+    def get_objects(self):
+        return self.model.query.all()
+
+    def dispatch_request(self):
+        context = {'objects':self.get_objects(),
+                    'columns':self.columns}
+        return self.render_template(context)
+
+app.add_url_rule(
+    '/generic_posts', view_func=GenericListView.as_view(
+        'generic_posts', model=Post)
+    )
+
+app.add_url_rule(
+    '/generic_users', view_func=GenericListView.as_view(
+        'generic_users', model=User)
+)
+
+app.add_url_rule(
+    '/generic_comments', view_func=GenericListView.as_view(
+        'generic_comments', model=Comment)
+)
+
+app.register_blueprint(blog_blueprint)
+
+@app.errorhandler(404)
+def page_not_found(error):
+    return render_template('404.html'), 404
+
+@app.before_request
+def before_request():
+    session['page_loads'] = session.get('page_loads', 0) + 1
+    g.random_keyt = random.randrange(1, 10)
 
 if __name__ == '__main__':     
     app.run(host='0.0.0.0')
