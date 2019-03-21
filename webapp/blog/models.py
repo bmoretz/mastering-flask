@@ -8,26 +8,6 @@ tags = db.Table(
     db.Column('tag_id', db.Integer, db.ForeignKey('tag.id'))
 )
 
-class User(db.Model):
-    __tablename__ = 'user'
-    __table_args__ = {'extend_existing': True} 
-
-    id = db.Column(db.Integer(), primary_key = True)
-    username = db.Column('username', db.String(255), nullable=False, index=True, unique=True)
-    password = db.Column(db.String(255))
-
-    posts = db.relationship(
-        'Post',
-        backref='user',
-        lazy='dynamic'
-    )
-
-    def __init__(self, username=""):
-        self.username = username
-
-    def __repr__(self):
-        return "<User '{}'>".format(self.username)
-
 class Post(db.Model):
     __tablename__ = 'post'
     __table_args__ = {'extend_existing': True }

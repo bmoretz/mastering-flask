@@ -1,7 +1,7 @@
 import os
 from webapp import db, migrate, create_app
-from webapp.blog.models import User, Post, Tag, Comment
-
+from webapp.blog.models import Post, Tag, Comment
+from webapp.auth.models import User
 from config import DevConfig
 
 app = create_app(DevConfig)

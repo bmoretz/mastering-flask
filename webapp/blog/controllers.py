@@ -1,8 +1,12 @@
 from sqlalchemy import func
 from sqlalchemy.sql import text
 from flask import render_template, Blueprint, flash, redirect, url_for, current_app
-from .models import db, Post, Tag, Comment, User, tags
-from .forms import CommentForm
+from flask_login import login_required, current_user
+from .models import db, Post, Tag, Comment, tags
+
+from .forms import CommentForm, PostForm
+from ..auth.models import User
+from ..auth import has_role
 
 blog_blueprint = Blueprint(
     'blog',

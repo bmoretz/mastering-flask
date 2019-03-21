@@ -11,7 +11,9 @@ migrate = Migrate(app, db)
 from flask import render_template, session, g
 from flask.views import View
 
-from webapp.blog.models import Post, User, Comment
+from webapp.blog.models import Post, Comment
+from webapp.auth.models import User
+
 class GenericListView(View):
 
     def __init__(self, model, list_template='generic_list.html'):
@@ -52,5 +54,5 @@ def before_request():
     session['page_loads'] = session.get('page_loads', 0) + 1
     g.random_key = random.randrange(1, 10)
 
-if __name__ == '__main__':     
+if __name__ == '__main__':
     app.run(host='0.0.0.0')

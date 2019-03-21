@@ -6,7 +6,6 @@ main_blueprint = Blueprint(
     template_folder='../templates/main'
 )
 
-
 @main_blueprint.route('/')
 def index():
     return redirect(url_for('blog.home'))
