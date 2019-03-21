@@ -61,7 +61,6 @@ class User(db.Model):
     def get_id(self):
         return str(self.id)
 
-
 class Role(db.Model):
     id = db.Column(db.Integer(), primary_key=True)
     name = db.Column(db.String(80), unique=True)
